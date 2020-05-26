@@ -3,20 +3,70 @@ import json
 from fuzzywuzzy import fuzz
 import re
 from sklearn.feature_extraction.text import TfidfVectorizer,CountVectorizer,TfidfTransformer
-from sklearn.metrics.pairwise import cosine_similarity
-from scipy.spatial import distance
+from map_ingredients_to_fridge import return_recipe_notification
+from barcode_parser import parse_barcodes 
+from parse_recipes import map_ingredients_to_special_diets
 
 
-# def similar(a, b):
-#     return SequenceMatcher(None, a, b).ratio()
+
+def check_and_return_country_existance(temp_country):
+    path = 'C:/Users/gregh/Desktop/thesis/Smart-Fridge-Thesis/all_cuisine_data'
+    recipes_path = '/final_cuisine_recipes.json'
+    with open(path + recipes_path) as json_file:
+        recipes_data = json.load(json_file)
+    for country,recipes in recipes_data.items():
+        if fuzz.ratio(country.lower(),temp_country.lower()) >= 90:
+            return (True,country,recipes)
+    return False,None,None
+
+def check_and_return_diet_existance(temp_diet):
+    path = 'C:/Users/gregh/Desktop/thesis/Smart-Fridge-Thesis/special_diets'
+    recipes_path = '/final_special_diets.json'
+    with open(path + recipes_path) as json_file:
+        recipes_data = json.load(json_file)
+    for diet,recipes in recipes_data.items():
+        if fuzz.ratio(diet.lower(),temp_diet.lower()) >= 85:
+            return (True,recipes_data[diet])
+    return False,None
 
 
 class fridge_contet:
-    def __init__(self,name, content_list=None):
+    def __init__(self,name, content_list=None,diet=None,country_cuisine=None):
         self.name = name
+        if diet is None:
+            self.diet_dict  = {}
+        if country_cuisine is None:
+            self.country_cuisine_dict = {}
         if content_list is None:
-            content_list = {}
-        self.content_list = content_list
+            self.content_list = {}
+    def get_content_list(self):
+        return self.content_list
+    def add_country_cuisine(self,country):
+        if check_and_return_country_existance(country)[0]:
+            print('adding this country cuisine: ', country)
+            self.country_cuisine_dict[country]  = check_and_return_country_existance(country)[2]##append a dictionary : - id - rating - recipeName - ingredients 
+        else:
+            print('there is no such a country cuisine, sorry try again')
+    def get_country_cuisine(self):
+        return self.country_cuisine_dict
+    def add_diet(self,diet):
+        if check_and_return_diet_existance(diet)[0]:
+            print('adding this diet: ', diet)
+            self.diet_dict[diet] = check_and_return_diet_existance(diet)[1]
+        else:
+            print('there is no such a diet,sorry for the incovenience')
+    def remove_diet(self,diet):
+        if diet in self.diet_dict.keys():
+            del self.diet_dict[diet]
+        else:
+            print('this diet: ',diet,'is not present in your diet dictionary')
+    def remove_country_cuisine(self,country):
+         if country in self.country_cuisine_dict.keys():
+            del self.country_cuisine_dict[country]
+         else:
+            print('this country: ',country,'is not present in your country cuisine dictionary')
+    def get_diet(self):
+        return self.diet_dict
     def add(self,fridge_el):
         if fridge_el.name in self.content_list:
             self.increment_freq(fridge_el)
@@ -45,142 +95,18 @@ class fridge_el:
     def __str__(self):
         return str(self.name)
 
-
-
-##
-# in this section I am using CountVectorizer to extracts ingrendients from recipes and fridge content, so I have to make a vector per each of the category(recipe,fridge), but
-# the size of the two categories, its always never the same,but we need to fit the same size vectors in order to perform an accurate comparison. So lets take an example in consideration
-# if the fridge content is (5) and the recipe size is (11) , we already know that we dont have enough ingredients, but we still want how much correlation there is bt the two.
-# So we divide the Fridge in a vector of (5) and the recipe into 3 vectors(because it does not fit in two) , of all size 5 , therefore in the last vector there will be a repetition, which is not important.
-#In the case in which recipe size is smaller than fridge content, the opposite process is perfomed.
-
-
-#here we return the chunk list, of the largest category between the two, and we fit the largest category into the size of the smaller one
-def return_raw_ingredients_into_chuncks(raw_ingredients,smaller_size):
-    chunck_list = list()
-    recipe_size = len(raw_ingredients)
-    if (recipe_size%smaller_size)==0:
-        chunck_size = recipe_size/smaller_size
-        for i in range(0,chunck_size-1):
-            chunck_list.append(raw_ingredients[i*smaller_size:smaller_size*i+1])
-            return chunck_list
-    else:
-        counter  = 0
-        flag = recipe_size/smaller_size
-        flag = int(flag)
-        for i in range(0,(recipe_size)):
-            if counter == flag:
-                print('what')
-                n_new_ingredient = recipe_size - i
-                n_old_ingredient = smaller_size- n_new_ingredient
-                start_index = i - n_old_ingredient
-                last_chunck = raw_ingredients[start_index:recipe_size]
-                chunck_list.append(last_chunck)
-                print(last_chunck, 'at counter',counter+1, 'from',start_index, 'to', recipe_size)
-            if ((i+1 )% smaller_size) == 0:
-                counter = counter + 1
-                print('this is counter',counter,'at ', i)
-                chunck=  raw_ingredients[i-(smaller_size-1): i+1]
-                chunck_list.append(chunck)
-                print(chunck, 'at counter',counter, 'from',i-(smaller_size-1), 'to', i)
-                continue
-            else:
-              print(i)
-              if counter < flag:
-                    continue
-        return chunck_list
-
-
-#CountVectorizer on a chunck, and it return the feature_name of vector
-def CountVectorizer_recipe(chunck):
-    cv2=CountVectorizer(analyzer = 'word' , token_pattern = r'.*')
-    word_count_vector2=cv2.fit_transform(chunck)
-    #print('recipe ingredients',cv2.get_feature_names())
-    v2 = cv2.get_feature_names()
-    return v2
-
-#This function compares each element of the two category and calculates and returns their similarities
-def return_ratio(chunck_list,smallest,enough_ingredients,recipe_id):
-    fridge_to_recipes = list()
-    for i in range(0,len(chunck_list)):
-        v2 = CountVectorizer_recipe(chunck_list[i])
-        print('chunks of bigger', v2)
-        if enough_ingredients:
-            for i in range ( 0 , len(smallest)):
-                for j in range (0, len(v2)):
-                    if fuzz.ratio(smallest[i].lower(),v2[j].lower()) >= 60 and   fuzz.ratio(smallest[i].lower(),v2[j].lower()) < 90:
-                        print(fuzz.ratio(smallest[i].lower(),v2[j].lower()), 'for', smallest[i], v2[j])
-                    if fuzz.ratio(smallest[i].lower(),v2[j].lower()) >= 90 and str(v2[j]) != '':
-                        print('this fridge element ', v2[j], 'is in recipe id' ,recipe_id )
-                        if v2[j] not in fridge_to_recipes:
-                            fridge_to_recipes.append(v2[j])
-            print(fridge_to_recipes)
-
-        else:
-            print(' NOT ENOUGH')
-
-def return_recipe_notification(raw_ingredients, content_list,recipe_id):
-    fridge_counter =  0
-    recipe_size = len(raw_ingredients)
-    f_food = list()
-    print('this is rawwwwwwww')
-    print(' ')
-    for name in content_list:
-        f_food.append(name)
-    fridge_size = len(f_food)
-    print('fridge size',fridge_size)
-    print(f_food)
-    print('recipe size', recipe_size)
-    print(raw_ingredients)
-    #fit chunck on fridge_size
-    if recipe_size > fridge_size:
-        print('recipe is bigger')
-        chunck_list = return_raw_ingredients_into_chuncks(raw_ingredients,fridge_size)
-        temp_vector = CountVectorizer_recipe(f_food)
-        print('smallest', temp_vector)
-        return_ratio(chunck_list, temp_vector,False,recipe_id)
-    #fit chuncks on recipe_size
-    elif fridge_size > recipe_size:
-        print('recipe is smaller')
-        chunck_list = return_raw_ingredients_into_chuncks(f_food, recipe_size)
-        temp_vector = CountVectorizer_recipe(raw_ingredients)
-        print('smallest', temp_vector)
-        return_ratio(chunck_list,temp_vector,True,recipe_id)
-    elif fridge_size == recipe_size:
-        CountVectorizer_recipe(f_food)
-        CountVectorizer_recipe(raw_ingredients)
-    print(chunck_list)
-    exit()
-
-    # print(l)
-    # exit()
-    # vectorizer = TfidfTransformer(use_idf=True, norm=None)
-    # vectorizer.fit(word_count_vector)
-    # count_vector=cv.transform(raw_ingredients)
-    # tf_idf_vector=vectorizer.transform(count_vector)
-    # feature_names = cv.get_feature_names()
-    # print('these are the featuresssss:', feature_names)
-    # recipe_df= pd.DataFrame()
-    # for i in range(len(raw_ingredients)):
-    #     first_document_vector=tf_idf_vector[i]
-    #     df = pd.DataFrame(first_document_vector.T.todense(), index=feature_names, columns=["tfidf"])
-    #     df = df.sort_values(by=["tfidf"],ascending=False)
-    #     recipe_df[i] = df.iloc[:,0]
-    # print(recipe_df)
-    # exit()
-    # return feature_names
 #def : check for the existencde of 'barcode' --barcode from scanned element --mapping to a 'barcodes.json' -- json dictionary of barcodes and respective element
 #- if the 'barcode' exists in dictionary - return a True, the value of the key of the barcode -- else return false and the barcode which does not exists in the
 #dictionary
 def check_and_return_barcode_existance(barcode,fridge_obj):
     print(fridge_obj)
-    path = 'C:/Users/gregh/Desktop/thesis/barcode_data'
+    path = 'C:/Users/gregh/Desktop/thesis/Smart-Fridge-Thesis/barcode_data'
     barcode = barcode[2:len(barcode)-1]
     barcode_file_path = 'barcodes_all_codes_test2_real.json'
     with open(path + '/' + barcode_file_path) as json_file:
         barcode_data = json.load(json_file)
     if barcode in barcode_data:
-        el = fridge_el(barcode_data[barcode][0], barcode_data[barcode][1])# NEED TO INITIALIZE QUANTITY AS WELL
+        el = fridge_el(barcode_data[barcode][0], barcode_data[barcode][1])
         fridge_obj.add(el)
         print(fridge_obj)
         map_ingredients_to_recipes(fridge_obj)
@@ -189,66 +115,105 @@ def check_and_return_barcode_existance(barcode,fridge_obj):
         print('this is the input barcode which does not exists', barcode)
         return tuple((False,barcode))
 
+
 def map_ingredients_to_recipes(fridge):
-    path = 'C:/Users/gregh/Desktop/thesis/all_cuisine_data'
-    recipes_path = '/all_cuisine_recipes.json'
-    with open(path + recipes_path) as json_file:
-        recipes_data = json.load(json_file)
-    for country,recipes in recipes_data.items():
-        if len(recipes) <  1:
-            continue
+    print('in mapping')
+    list_country_recipes = list()
+    recipe_string_list = list()
+    if bool(fridge.get_diet):
+        #Extractopic(fridge,check_and_return_diet_existance(fridge.get_diet()[0])[1])
+        print('speciallllllllllllllllllllll')
+        map_ingredients_to_special_diets(fridge)
+        exit()
+    else:
+        if bool(fridge.country_cuisine_dict):
+            country_recipe_dict =  fridge.get_country_cuisine()
+            for key , informations in country_recipe_dict.items():
+                print(key)
+                #print(informations)              
+                # recipes key are : id, recipeName, rating,totalTimeInSeconds, course, cuisine,ingredients
+                for recipe_id,value in informations['ingredients'].items():
+                    print('this is recie',recipe_id)
+                    print('this name of recipes', informations['recipeName'][recipe_id])
+                    exit()
+                    raw1 = list()
+                    raw = value.split(',')
+                    for el in raw:
+                        el = re.sub(r'[^\w\s]','',el)
+                        el = re.sub(r"\s+", ' ', el.lstrip())
+                        print(el)
+                        #parse_barcodes(el)
+                        #continue
+                        raw1.append(el)
+                    #print(raw1)
+                    print('this is raw recipe', raw1)
+                    recipe_string_list.append((raw1,recipe_id))
+                    if len(recipe_string_list) > 3:
+                        parse_barcodes(recipe_string_list)
+                        exit()
+                    else:
+                        print('NOT YETTTTTTTTTTTTTTT')
+                        continue
+
+                # if parse_barcodes(raw1)[0] == False:
+                #     print('PARSE BARCODE ITS FALSE')
+                #     continue
+                # else:
+                #     print('this is id ', recipe_id)
+                #     print('there is a similarity in recipe', recipes['recipeName'][recipe_id])
+                #     result = parse_barcodes(raw1)
+                #     print(raw1)
+                #     ind = result[1]
+                #     vec = result[2]
+                #     print(vec)
+                #     print(ind)
+                #     # for i in range(0,len(ind)):
+                #     #     print('similar ingredients to recipes',vec[i[0]][i[1]])
+                #     exit()
         else:
-            print(country)
-            # recipes key are : id, recipeName, rating,totalTimeInSeconds, course, cuisine,ingredients
-            # for id, value in recipes['recipeName'].items():
-            #     print(id)
-            #     print(value)
-            #     exit()
-            for recipe_id,value in recipes['ingredients'].items():
-                raw1 = list()
-                raw = value.split(',')
-                for el in raw:
-                    el = re.sub(r'[]]','',el)
-                    el = re.sub(r'[[]','',el)
-                    el = re.sub(r"\s+", '-', el.lstrip())
-                    raw1.append(el)
-                print(raw1)
-                return_recipe_notification(raw1,fridge.content_list,recipe_id)
-                exit()
-                # for ingredient in value.split(','):
-                #     for name,quantity in fridge.content_list.items():
-                #         temp_name = re.sub(r'[^\w\s]',' ',name)
-                #         if fuzz.ratio(temp_name.lower(),ingredient.lower()) >= 40:
-                #             print('found similaritiesssssssssssssssssssssssssssssssssssss' ,fuzz.ratio(temp_name.lower(),ingredient.lower()),'this ingredient', ingredient,'with the obj',name)
-            exit()
+            print('no country')
+                #return_recipe_notification(raw1,fridge.content_list,recipe_id)
+
 
 
 obj1 = fridge_el('sandwi-bread', 1)
-obj2 = fridge_el('buttermilks', 1)
-obj3 = fridge_el('breadcorn', 1)
-obj4 = fridge_el('red-pepper', 1)
-obj5 = fridge_el('sage', 1)
-obj6 = fridge_el('eggs', 1)
-obj7 = fridge_el('onions', 1)
-obj8 = fridge_el('celery', 1)
-obj9 = fridge_el('butter', 1)
-obj10 = fridge_el('chicken-soup', 1)
-obj11= fridge_el('chicken-stock', 1)
-obj12 = fridge_el('spicy-pepper', 1)
+obj2 = fridge_el('dark chocolate and sea salt farm brothers',1)
+obj3 = fridge_el('buttermilks', 1)
+# obj3 = fridge_el('breadcorn', 1)
+# obj4 = fridge_el('red-pepper', 1)
+# obj5 = fridge_el('sage', 1)
+# obj6 = fridge_el('eggs', 1)
+# obj7 = fridge_el('onions', 1)
+# obj8 = fridge_el('g', 1)
+# obj9 = fridge_el('butter', 1)
+# obj10 = fridge_el('chicken-soup', 1)
+# obj11= fridge_el('chicken-stock', 1)
+# obj12 = fridge_el('pasta',1)
+# obj13= fridge_el('oil', 1)
 
 fridge = fridge_contet('JIM')
 fridge.add(obj1)
 fridge.add(obj2)
+fridge.add_country_cuisine('american')
+#fridge.add_country_cuisine('mexican')
+fridge.add_diet('dairy-free')
+fridge.add_diet('gluten-free')
+#print(fridge.get_diet())
+#print(fridge.get_country_cuisine())
 fridge.add(obj3)
-fridge.add(obj4)
-fridge.add(obj5)
-fridge.add(obj6)
-fridge.add(obj7)
-fridge.add(obj8)
-fridge.add(obj9)
-fridge.add(obj10)
-fridge.add(obj11)
-fridge.add(obj12)
+map_ingredients_to_recipes(fridge)
+exit()
+#print(fridge.get_content_list())
+# fridge.add(obj4)
+# fridge.add(obj5)
+# fridge.add(obj6)
+# fridge.add(obj7)
+# fridge.add(obj8)
+# fridge.add(obj9)
+# fridge.add(obj10)
+# fridge.add(obj11)
+# fridge.add(obj12)
+# fridge.add(obj13)
 
     ## two procedure
     #1 - use a sequence model to determine the correlation between fridge ingredients and different ingredients in each recipe.
@@ -256,4 +221,4 @@ fridge.add(obj12)
     # when a corellation of itemX is found in fridge and recipe, then I look at the recipe which has the highest correlation, call it Y,  and then check if in my
     # fridge content there are a lot of correlation to recipe Y.
     #2 --
-map_ingredients_to_recipes(fridge)
+

@@ -1,0 +1,487 @@
+import json
+import re
+from sklearn.feature_extraction.text import TfidfVectorizer,CountVectorizer,TfidfTransformer
+import en_core_web_sm
+import spacy
+from spacy.tokens import Doc,Span,Token
+from spacy.matcher import Matcher
+from numpy import dot
+from numpy.linalg import norm
+import numpy as np
+import random
+from nltk.corpus import stopwords
+
+root_text = list()
+amod_text = list()
+compound_text = list()   
+noun_text = list()
+propn_text = list()
+adj_text = list()
+
+
+nlp = spacy.load('en_core_web_md')
+
+def CountVectorizer_special_recipe(chunck):
+    cv2=CountVectorizer(analyzer = 'word' ,stop_words = 'english', lowercase = True , ngram_range=(1,2))
+    for x in chunck:
+        if  x not in stopwords.words('english'):
+                word_count_vector2=cv2.fit_transform(chunck)
+                v2 = cv2.get_feature_names()
+                return v2
+        else:
+            continue
+    return None
+
+def generate_ngrams(words_list, n):
+    ngrams_list = []
+    for num in range(0, len(words_list)):
+        ngram = ' '.join(words_list[num:num + n])
+        ngrams_list.append(ngram)
+
+    return ngrams_list
+
+
+
+def cosine(v1, v2):
+    if norm(v1) > 0 and norm(v2) > 0:
+        return dot(v1, v2) / (norm(v1) * norm(v2))
+    else:
+        return 0.0
+
+def spacy_closest(token_list, vec_to_check, n):
+    print('vec to cechk', vec_to_check)
+    return sorted(token_list,
+                  key=lambda x: cosine(vec_to_check, vec(x)),
+                  reverse=True)[:n]
+
+def vec(s):
+    return nlp.vocab[s].vector
+
+def sentvec(s):
+    sent = nlp(s)
+    return meanv([w.vector for w in sent])
+
+def meanv(coords):
+    sumv = [0] * len(coords[0])
+    for item in coords:
+        for i in range(len(item)):
+            sumv[i] += item[i]
+    mean = [0] * len(sumv)
+    for i in range(len(sumv)):
+        mean[i] = float(sumv[i]) / len(coords)
+    return mean
+
+def spacy_closest_sent(space, input_str, n=10):
+    print('input string', input_str)
+    input_vec = sentvec(input_str)
+    return sorted(space,
+                  key=lambda x: cosine(np.mean([w.vector for w in x], axis=0), input_vec),
+                  reverse=True)[:n]
+
+
+def return_semantic(NOUN,PROPN,ADJ,ROOT):
+    print('semantic')
+    options = list()
+    if PROPN and ROOT:
+        propn = ''
+        root = ''
+        print('propn, root')
+        len_propn = len(propn_text)
+        propnCosine =0
+        for p in propn_text:
+                for r in root_text:
+                    print('this is cosine', cosine(vec(p),vec(r)))
+                    if (cosine(vec(p),vec(r)) > propnCosine and cosine(vec(p),vec(r)) < 0.95) or (len(propn_text) < 2):
+                        print('INITIALIZED')
+                        propn = p
+                        root = r
+                        propnCosine = cosine(vec(p),vec(r))
+        if propn and root:
+            r_pTuple =(propn,root)
+            options.append(r_pTuple)
+            return options
+        else:
+            options.append(root_text[0])
+            return options
+    
+    if NOUN and ROOT:
+        noun = ''
+        root = ''
+        len_noun = len(noun_text)
+        print('noun , root')
+        nounCosine = 0
+        for n in noun_text:
+            for r in root_text:
+                print('this is cosine', cosine(vec(n),vec(r)))
+                if (cosine(vec(n),vec(r)) > nounCosine and cosine(vec(n),vec(r)) < 0.95) or (len(noun_text)< 2):
+                    print('INITIALIZED')
+                    noun = n
+                    root = r
+                    nounCosine = cosine(vec(n),vec(r))
+        if root and noun:
+            r_nTuple =(root,noun)
+            options.append(r_nTuple)
+            return options
+         else:
+            options.append(root_text[0])
+            return options
+
+    if NOUN and PROPN:
+        noun = ''
+        propn = ''
+        print('noun , propn')
+        noun_cosine_value  =0
+        for n in noun_text:
+            for p in propn_text:
+                print('this is cosine', cosine(vec(n),vec(p)))
+                if cosine(vec(p),vec(n)) > noun_cosine_value and cosine(vec(p),vec(n)) < 0.95:
+                    noun_cosine_value =  cosine(vec(p),vec(n))
+                    noun = n
+                    propn = p
+                    print(n,p)
+                else:
+                    break
+        if noun and propn:
+            np_Tuple= (noun,propn)
+            options.append(np_Tuple)
+            return options
+    if NOUN and ADJ:
+        adj = ''
+        noun = ''
+        print('noun , adj')
+        n_aCosine = 0
+        for n in noun_text:
+            for a in root_text:
+                print('this is cosine', cosine(vec(m),vec(a)))
+                if cosine(vec(n),vec(a)) > n_aCosine and cosine(vec(n),vec(a)) < 0.95:
+                    noun = n
+                    adj = a
+                    print(n,a)
+                    n_aCosine = cosine(vec(n),vec(a))
+                else:
+                    break
+        if noun and adj:
+            n_aTuple =(noun,adj)
+            options.append(n_aTuple)
+            return options
+
+    print(options)
+    return options
+
+
+
+
+def sample_n_barcode(n):
+    entity = False
+    ROOT = False
+    NOUN = False
+    amod = False
+    compound = False
+    PROPN = False
+    ADJ = False
+    token_dep = list()
+    token_pos = list()
+    path = 'C:/Users/gregh/Desktop/thesis/Smart-Fridge-Thesis/barcode_data'
+    barcode_file_path = 'translated_barcode.json'
+    with open(path + '/' + barcode_file_path) as json_file:
+        barcode_data = json.load(json_file)
+    dictionary = random.sample(barcode_data.items(),n)
+    # dictionary = dict(zip(barcodes, ingredients)) ##
+    fridge_list = list()
+    fridge_list_vec = list()
+    for barcode, ingredient in dict(dictionary).items():#ingredient - list(ingredient,quantity)
+        cleaned_fridge_ingredients = re.sub(r"[^A-Za-z()]", " ", ingredient[0])
+        try:
+            vector = CountVectorizer_special_recipe(cleaned_fridge_ingredients.split(' '))
+        except ValueError:
+                    print('empty vocabulary')
+                    continue
+        if not vector:
+            print('this is empty vector',vector)
+            continue
+        temp_fridge = ' '.join(vector)
+        temp_fridge = temp_fridge.replace('albert','')
+        temp_fridge = temp_fridge.replace('heijn','')
+        temp_fridge = temp_fridge.replace('ah','')
+        temp_fridge = temp_fridge.replace('jumbo','')
+        temp_fridge = temp_fridge.replace('ekoplaza','')
+        temp_fridge = temp_fridge.replace('hellmann','')
+        if temp_fridge and temp_fridge != ' ':
+            doc = nlp(temp_fridge)
+            print(' ')
+            print('this is entire doc',doc)
+            print('this is entyty: ', doc.ents, 'of doc ', doc)
+            token_dep = list([[t.dep_,t.text] for t in doc])
+            token_pos =list([[t.pos_, t.text]for t in doc])
+            print(token_dep)
+            print(token_pos)
+            replacement = ''
+            if doc.ents: ## check entity exsitance
+                entity = True
+                entity_text = str((doc.ents)[0])
+            else:
+                entity =  False
+            for el in token_dep:
+                if 'ROOT' in el:
+                    print('ROOOOOOOOOOOOOOOOOT')
+                    ROOT = True
+                    root_text.append(el[1])
+                if 'amod' in el:
+                    amod = True
+                    amod_text.append(el[1])
+                if 'compound' in el:
+                    compound = True
+                    compound_text.append(el[1])
+            for pos in token_pos:
+                print('this is pos', pos)
+                if 'NOUN' in pos:
+                    NOUN = True
+                    noun_text.append(pos[1])
+                    print(noun_text)
+                if 'PROPN' in pos:
+                    PROPN = True
+                    propn_text.append(pos[1])
+                if 'ADJ' in pos:
+                    ADJ =  True
+                    adj_text.append(pos[1]) 
+            ## 1 case in which root and entity are both present       
+            if ROOT and entity:
+                for r in root_text:
+                    if r in entity_text:
+                        replacement = entity_text
+                        print('this replacement', replacement)
+            ## 2 case no entity, extract semantic from recipe - delete some abstraction in order to keep it more simple
+            for el in return_semantic(NOUN,PROPN,ADJ,ROOT):
+                temp_fridge =  ''
+                for in_el in el:
+                    temp_fridge =  temp_fridge+' '+in_el
+                    ##returns a list of tuples -- need to append those
+            fridge_list.append(temp_fridge.strip())
+            fridge_list_vec.append(temp_fridge.split(' '))
+            continue
+        else:
+            print('empty element')
+            continue
+
+    print( ' ')
+    print('list',fridge_list)
+    print('veccc',fridge_list_vec)
+    exit()
+    return fridge_list, fridge_list_vec
+
+fridge_list,fridge_list_vec = sample_n_barcode(3)
+
+
+def Matcher_func(ingre,recipe_doc):
+    print('fridge ingrer to compare', ingre)
+    matcher = Matcher(nlp.vocab)
+    pattern = [{'TEXT': str(ingre)}]
+    matcher.add('rule_1', None, pattern)
+    matches = matcher(recipe_doc)
+    print(matches)
+
+
+
+def check_extension(fride_doc, recipe_doc):
+    print('this is recipe', recipe_doc)
+    for f in fride_doc:
+        print('this is fridge',f )
+        if f == '':
+            continue
+        else:
+            has_similar_to_fridge = lambda r_obj : any([cosine(sentvec(f),sentvec(r.text))> 0.7 for r in r_obj])
+            Doc.set_extension('has_similar_element', getter = has_similar_to_fridge, force = True)
+            if recipe_doc._.has_similar_element:
+                return True, f , recipe_doc
+            else:
+                continue
+    return False, None , None
+
+
+#############################
+    # #print(sentvec(r))
+    #
+    # for r in recipe_list:
+    #     print(r)
+    # for  f in fridge:
+    #     print(f)
+    # for i in range(0,len(fridge)):
+    #     for j in range(0,len(recipe_list)):
+    #         print('this is cosine for fridge el',fridge[i], 'and recipe ingredient' , recipe_list[j], cosine(vec(fridge[i]), vec(recipe_list[j])))
+    # exit()
+    # print(recipe_doc)
+    # recipe_sent = list(recipe_doc.sents)
+        ####print(temp_fridge)
+    #fridge_list,fridge_list_vec = sample_n_barcode(10)
+# ##############################
+# for x in doc:
+#     #print(sentvec(x))
+#     exit()
+# sentences = doc.sents
+# print(list(sentences))
+# exit()
+# for x in sentences:
+#     print(x)
+# temp_x = list()
+# sents = list()
+# # for x in sentences:
+# #     if flag == True and str(x).endswith('.') :
+# #         print('this is the constructed sent')
+# #         t =''
+# #         for y in temp_x:
+# #             t = t + str(y)
+# #         print(t+str(x))
+# #         sents.append(t+str(x))
+# #         temp_x = list()
+# #         flag = False
+# #         continue
+# #     if not str(x).endswith('.'):
+# #         flag = True
+# #         temp_x.append(str(x))
+# #         continue
+# #     if str(x).endswith('.') and flag == False:
+# #         print('this is a good sent:' ,x)
+# #         sents.append(x)
+# #         print(' ')
+# #         continue
+# sentences  = list(sents)
+# for sent in spacy_closest_sent(sentences, fridge_list[i]):
+#     print (sent.text)
+#     print ("---")
+# exit()
+######################################################
+###
+def parse_barcodes(recipe_ingredients,list_of_recipe):
+    similar_ingredient = False
+    similar_ingredient_ind =list()
+    #print(type(recipe_ingredients))
+    #print(recipe_ingredients[0])
+    #r = ' '.join(recipe_ingredients)
+    # doc = nlp(r)
+    # for x in recipe_ingredients:
+    #     x_doc = nlp(x)
+    #     #print('this is doc',x_doc)
+    #     break
+    #print('this is doc',doc)
+    #tokens = list(set([w.text for w in doc if w.is_alpha]))
+    #recipe_list = recipe_ingredients.split(' ')
+    #print(r[0])
+####################################
+    # #print(sentvec(r))
+    #
+    # for r in recipe_list:
+    #     print(r)
+    # for  f in fridge:
+    #     print(f)
+    # for i in range(0,len(fridge)):
+    #     for j in range(0,len(recipe_list)):
+    #         print('this is cosine for fridge el',fridge[i], 'and recipe ingredient' , recipe_list[j], cosine(vec(fridge[i]), vec(recipe_list[j])))
+    # exit()
+    # print(recipe_doc)
+    # recipe_sent = list(recipe_doc.sents)
+        ####print(temp_fridge)
+    #fridge_list,fridge_list_vec = sample_n_barcode(10)
+    fridge_sent = ''.join(fridge_list)
+#    print('this is recipe', r)
+    flag = False
+    if len(fridge_list) > 5:
+        for recipe in list_of_recipe:
+            if check_extension(fridge_list,nlp(recipe[0]))[0]:
+                print('EXTENSION TRUE WITH RECIPE', recipe[0])
+                r = ' '.join(recipe[0])
+                recipe_string_list = recipe[0].split(' ')
+                r_id = recipe[1]
+                for i in range(0,len(fridge_list)):
+                    #reipce_doc_to_check = ' '.join(list_of_recipe)
+                    print('fridge el', fridge_list[i])
+                    #print(spacy_closest(tokens, vec('milk'),len(tokens)))
+                    #exit()
+                    #Matcher_func(fridge_list[i],doc)
+                    #exit()
+                    print(' ')
+                    print('this is cosine between all fridge ingre',cosine(sentvec(fridge_sent),sentvec(r)))
+                    #print(' ')
+                    #print('this is the cosine: ',cosine(sentvec(r), sentvec(fridge_list[i])), 'for fridge el', fridge_list[i])
+                    #print(' ')
+                    if cosine(sentvec(r), sentvec(fridge_list[i])) > 0.3:
+                            for j in range(0,len(fridge_list_vec[i])):
+                                for g in range(0,len(recipe_string_list)):
+                                    print('this is cosine for fridge el',fridge_list_vec[i][j], 'and recipe ingredient' , recipe_string_list[g], cosine(vec(fridge_list_vec[i][j]), sentvec(recipe_string_list[g])))
+                                    if cosine(vec(fridge_list_vec[i][j]), sentvec(recipe_string_list[g])) > 0.8: ## when two strings matches we need to work with n-gram model to extract more meaning
+                                        similar_ingredient = True
+                                        similar_ingredient_ind.append((i,j,r_id)) ## here append the indexes of sent_vec similr fridge el, where i - is the list index , j - the string index - r_id - recipe_id
+                                        print(' ')
+                                        print('this is cosine for inner fridge el',fridge_list_vec[i][j], 'and recipe ingredient' , recipe_string_list[g], cosine(vec(fridge_list_vec[i][j]), sentvec(recipe_string_list[g])))
+                                        print(' ')
+                                    else:
+                                        continue
+                    else:
+                        print('value too low for ingre', fridge_list[i])
+                        continue
+
+            else:
+                print('NO EXTENSION')
+                continue
+        print(similar_ingredient_ind)
+        return similar_ingredient,similar_ingredient_ind,fridge_list_vec
+    else:
+        print('too few ingredients')
+    exit()
+    #     for i in range(0,len(fridge_list)):
+    #         reipce_doc_to_check = ' '.join(list_of_recipe)
+    #         print('fridge el', fridge_list[i])
+    #         #print(spacy_closest(tokens, vec('milk'),len(tokens)))
+    #         #exit()
+    #         #Matcher_func(fridge_list[i],doc)
+    #         #exit()
+    #         print(' ')
+    #         print('this is the cosine: ',cosine(sentvec(r), sentvec(fridge_list[i])), 'for fridge el', fridge_list[i])
+    #         print(' ')
+    #         if cosine(sentvec(r), sentvec(fridge_list[i])) > 0.8:
+    #                 for j in range(0,len(fridge_list_vec[i])):
+    #                     for g in range(0,len(recipe_ingredients)):
+    #                         print('this is cosine for fridge el',fridge_list_vec[i][j], 'and recipe ingredient' , recipe_ingredients[g], cosine(vec(fridge_list_vec[i][j]), sentvec(recipe_ingredients[g])))
+    #                         if cosine(vec(fridge_list_vec[i][j]), sentvec(recipe_ingredients[g])) > 0.8:
+    #                             similar_ingredient = True
+    #                             similar_ingredient_ind.append((i,j))
+    #                             print(' ')
+    #                             print('this is cosine for inner fridge el',fridge_list_vec[i][j], 'and recipe ingredient' , recipe_ingredients[g], cosine(vec(fridge_list_vec[i][j]), sentvec(recipe_ingredients[g])))
+    #                             print(' ')
+    #     return similar_ingredient,similar_ingredient_ind,fridge_list_vec
+    # else:
+    #     print('too few ingredients')
+
+
+
+
+
+
+
+        #print(cleaned_fridge_ingredients)
+        #ridge_doc = nlp(cleaned_fridge_ingredients)
+        #fridge_vec  = vec(fridge_doc)
+        #fridge_sent  = vec(temp_fridge)
+    #    print(cosine(recipe_sent,fridge_sent))
+        #break
+    #    exit()
+        # for sent in spacy_closest_sent(recipe_sent, cleaned_fridge_ingredients):
+        #     print (sent.text)
+        #     print ("---")
+        # #exit()
+        # temp_ingre = list(fridge_doc.sents)
+        # print(temp_ingre)
+        #exit()
+        #matcher = Matcher(nlp.vocab)
+
+        # pattern = [{'TEXT': 'chocolate'}]
+        # matcher.add('rule_1', None, pattern)
+        # matches = matcher(doc)
+        # print(matches)
+
+        # #print(nlp.vocab['carrot'].vector)
+        # tokens = list(set([w.text for w in doc if w.is_alpha]))
+        # print(spacy_closest(tokens,vec('chocolate'),len(tokens)))
+        # exit()
+        # for token in doc:
+        #     print(token.text, token.lemma_, token.pos_, token.tag_, token.dep_,
+        #     token.shape_, token.is_alpha, token.is_stop)
