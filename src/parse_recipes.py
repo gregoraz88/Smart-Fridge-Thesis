@@ -71,25 +71,63 @@ def parse_ingredients(value):
     ## handle where that are multiple quantity
     ##handle where quantity frequency is of multiple digits
     #handle the 'to' and 'or' statement
-    quantity_list = ['cup', 'Tbsp', 'gr', 'bunch', 'grams', 'ounce', 'kg', 'ml', 'l', 'cl', 'tsp','tbsp','cups','oz', 'ounces','lb', 'teaspoon','tablespoon','tablespoons','teaspoons', 'can', 'Pinch']
+    quantity_list = ['cup', 'Tbsp', 'bunch', 'grams', 'ounce', 'kg', 'ml', 'tsp','tbsp','cups', 'ounces', 'teaspoon','tablespoon','tablespoons','teaspoons', 'can', 'pinch', 'to_taste', 'for brushing'  ]
     #print(raw_ingredients)
     #print(recipe_name)
-    print(type(value))
+    #print(type(value))
     full_ingredient = value
     quantity_type = 'Empty'
     r_id = 0
+    delete_type = False
     for tuple_index,tuple_el in enumerate(full_ingredient):
+        OR = False
         quantity = ''
+        quantity_type = ''
         print(tuple_el)
+        delete_type  = False
+        typeToDelete = list()
         for t_el in tuple_el[0].split(' '):
-            if t_el in quantity_list:
-                print('ITS IN')
-                print(t_el)
-                quantity_type = t_el
+            if t_el == 'or':
+                or_index  =tuple_el[0].find('or')
+                OR = True
+                break
+            for type_list in quantity_list:
+                if t_el.lower().find(type_list) != -1:
+                    print('this is type_list found ', type_list)
+                    if delete_type:
+                        print('second appending' , t_el)
+                        if t_el not in typeToDelete:
+                            typeToDelete.append(t_el.lower())
+                            continue
+                    else:
+                        quantity_type = type_list
+                        if t_el not in typeToDelete:
+                            print('appendinggg ' , t_el)
+                            typeToDelete.append(t_el.lower())
+                            delete_type = True
+                            continue
+                else:
+                    continue
         print('this is quantity_type ', quantity_type)
-        ingre = tuple_el[0].replace(quantity_type,'')
+        print('this is what to delete', typeToDelete)
+        ingre =  tuple_el[0].lower()
+        if OR:
+            ingre = ingre[0:or_index-1]
+            for el in typeToDelete:
+                print('pre or  deleting ', ingre)
+                ingre = ingre.replace(el,'')
+                print('ingre at  or deleting ', ingre)
+            print('this is or ingre', ingre)
+            print('this is OR  quantity_type ', quantity_type)
+        else:
+            print('not orrrrr')
+            for el in typeToDelete:
+                print('pre deleting ', ingre)
+                ingre = ingre.replace(el,'')
+                print('ingre at deleting ', ingre)
         quantity =  tuple_el[1]
-        temp_tuple = ((ingre,quantity,quantity_type))
+        parsed_ingredient = ((ingre,quantity,quantity_type))
+        print('this is important temp tupleeeeeeeeeeeeeeee  ',  parsed_ingredient)
         #print('temp with quantity'  ,temp_tuple)
         inner_recipes_dict[r_id] = parse_semantic(ingre)
         print('this is options', inner_recipes_dict[r_id])
@@ -126,33 +164,6 @@ def map_ingredients_to_special_diets(fridge):#object fridge passed
             recipe_list.append(temp_dict)
             if len(recipe_list) > 1:
                 print('this is recipe list' ,recipe_list)
-                parse_barcodes(recipe_list)
+                parse_barcodes(recipe_list,fridge)
                 exit()
-            ## this returns the parsed ingredients of recipes - after this compare it to the fridge el
-
-
-
-# recipes_dict = {}
-# chdir('..')
-# chdir('data')
-# path1 = getcwd()
-# print(path1)
-# recipes_path = '/recipes_raw_epi.json'
-# with open(path1 + recipes_path) as json_file:
-#     recipes_data = json.load(json_file)
-#
-# counter = 0
-# temp_labels = list()
-# temp_x_train = list()
-# temp_list = list()
-# new_recipe_path = path.join( path1, 'cleaned_recipes.json')
-# for key,value in recipes_data.items():
-#     counter += 1
-#     if counter > 30:
-#         save_recipes(new_recipe_path,recipes_dict)
-#         #print(counter , 'recipeeeeeeeeeeeeeeeeeee')
-#     #TF_IDF(value['ingredients'])
-#     if value != None and len(value) >= 1:
-#         recipes_dict[value['title']] = return_ingredients(value)
-#         #print(value['title'])
-#         #print(recipes_dict)
+            ## this returns the parsed ingredients of recipes - after this compare it to the fridge el 

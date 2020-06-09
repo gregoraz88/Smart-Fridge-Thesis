@@ -120,13 +120,15 @@ def map_ingredients_to_recipes(fridge):
     print('in mapping')
     list_country_recipes = list()
     recipe_string_list = list()
-    if bool(fridge.get_diet):
+    if bool(fridge.get_diet()):
+        #print('this diet', fridge.get_diet())
         #Extractopic(fridge,check_and_return_diet_existance(fridge.get_diet()[0])[1])
         print('speciallllllllllllllllllllll')
         map_ingredients_to_special_diets(fridge)
         exit()
     else:
-        if bool(fridge.country_cuisine_dict):
+        print('no diettt')
+        if bool(fridge.get_country_cuisine()):
             country_recipe_dict =  fridge.get_country_cuisine()
             for key , informations in country_recipe_dict.items():
                 print(key)
@@ -135,7 +137,6 @@ def map_ingredients_to_recipes(fridge):
                 for recipe_id,value in informations['ingredients'].items():
                     print('this is recie',recipe_id)
                     print('this name of recipes', informations['recipeName'][recipe_id])
-                    exit()
                     raw1 = list()
                     raw = value.split(',')
                     for el in raw:
@@ -147,9 +148,15 @@ def map_ingredients_to_recipes(fridge):
                         raw1.append(el)
                     #print(raw1)
                     print('this is raw recipe', raw1)
-                    recipe_string_list.append((raw1,recipe_id))
-                    if len(recipe_string_list) > 3:
-                        parse_barcodes(recipe_string_list)
+                    temp_dict = {}
+                    temp_dict [recipe_id+'-'+key] = raw1 ##the key of the dictionary - recipe_id which is a digit that maps the recipe and key is the country key in dictionary fridge.get_coutnry_cuisine()
+                    recipe_string_list.append(temp_dict)
+                    #print(country_recipe_dict[key])
+                    #print(country_recipe_dict[key]['recipeName'][recipe_id])
+                    #print(country_recipe_dict[key]['ingredients'][recipe_id])
+                    #exit()
+                    if len(recipe_string_list) > 1:
+                        parse_barcodes(recipe_string_list,fridge)
                         exit()
                     else:
                         print('NOT YETTTTTTTTTTTTTTT')
@@ -172,6 +179,7 @@ def map_ingredients_to_recipes(fridge):
                 #     exit()
         else:
             print('no country')
+            exit()
                 #return_recipe_notification(raw1,fridge.content_list,recipe_id)
 
 
@@ -194,9 +202,9 @@ obj3 = fridge_el('buttermilks', 1)
 fridge = fridge_contet('JIM')
 fridge.add(obj1)
 fridge.add(obj2)
-fridge.add_country_cuisine('american')
+#fridge.add_country_cuisine('american')
 #fridge.add_country_cuisine('mexican')
-fridge.add_diet('dairy-free')
+#fridge.add_diet('dairy-free')
 fridge.add_diet('gluten-free')
 #print(fridge.get_diet())
 #print(fridge.get_country_cuisine())

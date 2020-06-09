@@ -72,4 +72,4 @@ def scrape_barcode():
         next_url = base_url + '/'+ str(page_counter)
         products,page_links = retun_page_products(next_url)
         counter += 1
-    save_barcodes(path1,barcode_dict)
+    #save_barcodes(path1,barcode_dict)

@@ -17,7 +17,7 @@ def translate_barcode_dict(text,keys,path):
             temp_list.append(el['translatedText'])
         translated_barcode_dict[key] = temp_list
     print('its time for some savingggggggggggggggggggggggggggggggggggggggggggggg')
-    save_barcodes(path + '/translated_barcode.json',translated_barcode_dict)
+    save_barcodes(path +  '/translated_barcode.json' , translated_barcode_dict)
 
 
 def save_barcodes(filename, barcode_dict):
