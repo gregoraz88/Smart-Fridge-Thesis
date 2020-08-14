@@ -7,7 +7,7 @@ import string
 import spacy
 from spacy.tokens import Doc,Span,Token
 from process_syntax import parse_semantic
-from barcode_parser import parse_barcodes,start_notification
+from barcode_parser import parse_barcodes
 import itertools
 import re
 
@@ -154,15 +154,14 @@ def map_ingredients_to_special_diets(fridge):#object fridge passed
     all_fridge_special_diets =  fridge.get_diet()
     for special_diet_name in all_fridge_special_diets.keys():
         print('output')
-        all_special_diets[special_diet_name] = return_all_special_diets(fridge,special_diet_name,1)
+        all_special_diets[special_diet_name] = return_all_special_diets(fridge,special_diet_name,2)
         #print('return of return all special ', all_fridge_special_diets[special_diet_name])
         print('at dieeett ', special_diet_name)
         print('this is list of  speceial recipes '  ,all_special_diets)
     for diet,recipes in all_special_diets.items():
         recipe_list =  recipe_list + recipes
-    if len(recipe_list) >= 1 :
-        start_notification(recipe_list,fridge)
-        #parse_barcodes(recipe_list,fridge)
+    if len(recipe_list) > 1 :
+        parse_barcodes(recipe_list,fridge)
         print('these are recipes ', recipe_list)
         exit()
                 #exit()

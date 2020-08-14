@@ -12,8 +12,6 @@ import random
 from nltk.corpus import stopwords
 from functools import reduce 
 
-
-
 nlp = spacy.load('en_core_web_md')
 
 def cosine(v1, v2):
@@ -285,9 +283,10 @@ def parse_semantic(not_doc):
     if nsubj or ROOT or compound:
         if ROOT and nsubj:
             print('rooT AND nsubj')
-            sort_tokens = spacy_closest(tokens, sentvec(root_text[0]+' '+nsubj_text[0]), len(tokens))
-            if sort_tokens[0] != root_text[0] and sort_tokens[0] != nsubj_text[0]:
-                return root_text[0]+' '+nsubj_text[0]+' '+sort_tokens[0]
+            if bool(tokens):
+                sort_tokens = spacy_closest(tokens, sentvec(root_text[0]+' '+nsubj_text[0]), len(tokens))
+                if sort_tokens[0] != root_text[0] and sort_tokens[0] != nsubj_text[0]:
+                    return root_text[0]+' '+nsubj_text[0]+' '+sort_tokens[0]
             return root_text[0]+' '+nsubj_text[0]
         if nsubj:
             print('nusbjjjjjjjjjjjjjjjjjjjj')
@@ -305,7 +304,10 @@ def parse_semantic(not_doc):
                 counter_elimation = int(len(compound_text)/2) 
                 print('elimination number', counter_elimation)
             print('tokens', tokens)
-            temp = spacy_closest(compound_text, sentvec(' '.join(tokens)), len(compound_text))
+            if bool(tokens):
+                temp = spacy_closest(compound_text, sentvec(' '.join(tokens)), len(compound_text))
+            else:
+                return compound_text[0]
             print('compound temp', temp)
             if len(temp) > 1:
                 return temp[0]+' '+temp[1]
@@ -317,7 +319,7 @@ def parse_semantic(not_doc):
     print('WAS NOT ENOUGHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHH')
     return 'None'
   
-    return ' '.join( return_semantic(NOUN,PROPN,ADJ,ROOT,noun_text,propn_text,adj_text,root_text)) #return semantic
+    #return ' '.join( return_semantic(NOUN,PROPN,ADJ,ROOT,noun_text,propn_text,adj_text,root_text)) #return semantic
 
 def return_semantic(NOUN,PROPN,ADJ,ROOT,noun_text,propn_text,adj_text,root_text):
 ##check for the root, if root is a verb do not take into consideration

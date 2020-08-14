@@ -3,22 +3,26 @@ import json
 import pandas as pd
 from os import chdir,getcwd
 import re
+from pandas.io.json import json_normalize
+import pathlib
 
 
-def translate_barcode_dict(text,keys,path):
+src_path = pathlib.Path.cwd()
+path_to_copy = src_path.parent/ 'barcode_data'
+barcode_path_pre_translation = src_path.parent /'barcode_data '/ 'barcodes_all_codes_test2_real.json'
+
+
+def translate_barcode_dict(text,keys):
     translated_barcode_dict = {}
     translate_client = translate.Client()
     for i,key in enumerate(keys):
         print('this is i ',i)
         temp_list = list()
         result = translate_client.translate(text[i], target_language='en')
-    #print(result)
         for el in result:
             temp_list.append(el['translatedText'])
         translated_barcode_dict[key] = temp_list
-    print('its time for some savingggggggggggggggggggggggggggggggggggggggggggggg')
-    save_barcodes(path +  '/translated_barcode.json' , translated_barcode_dict)
-
+    save_barcodes(path_to_copy /'translated_barcode.json' , translated_barcode_dict)
 
 def save_barcodes(filename, barcode_dict):
     with open(filename, 'a+') as f:
@@ -26,10 +30,7 @@ def save_barcodes(filename, barcode_dict):
 
 def translate_barcodeData_to_english():
     keysToRemove = list()
-    path = 'C:/Users/gregh/Desktop/thesis/Smart-Fridge-Thesis/barcode_data'
-    barcode_file_path = '/barcodes_all_codes_test2_real.json'
-
-    with open(path + barcode_file_path) as json_file:
+    with open(barcode_path_pre_translation) as json_file:
         barcode_data = json.load(json_file)
     for key,inner_list in barcode_data.items():
         ingre = inner_list[0].split('-')
@@ -48,9 +49,8 @@ def translate_barcodeData_to_english():
     print(key_list[0])
     print(len(key_list))
     print(len(to_translate))
-    translate_barcode_dict(to_translate,key_list,path)
+    translate_barcode_dict(to_translate,key_list)
     exit()
 
-
-
 translate_barcodeData_to_english()
+
