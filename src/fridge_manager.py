@@ -186,41 +186,34 @@ def check_and_return_barcode_existance(barcode,fridge_obj):
         print('this is the input barcode which does not exists', barcode)
         return tuple((False,barcode))
 
-#
+#def: this function initiate a search in corellation between the personalized recipes by the user and the user fridge ingredients 
 def map_ingredients_to_recipes(fridge):
     print('in mapping')
     list_country_recipes = list()
     recipe_string_list = list()
-    if not  fridge.is_content_list_empty():
+    if not  fridge.is_content_list_empty():#perform a check on the size of the fridge content, if none do not start notification
         fridge.check_country_and_diet_cuisine()
-        if fridge.get_food_preference == 'm':
+        if fridge.get_food_preference == 'm': # the user preference is a mixed of both country cuisine and special diets
             mixed_recipe = mix_country_with_diet_recipes(fridge)
             ##process_notification_system(recipes,fridge)
-            parse_barcodes(mixed_recipes, fridge)
+            start_notification(mixed_recipes, fridge)
             exit()
 
-        if bool(fridge.get_diet()) or fridge.get_food_preference == 'd':
+        if bool(fridge.get_diet()) or fridge.get_food_preference == 'd':# the user preference is a special diet or multiple special diets
             print('speciallllllllllllllllllllll')
             map_ingredients_to_special_diets(fridge)
             exit()
         else:
             print('no diettt recipes')
-        if bool(fridge.get_country_cuisine()) or fridge.get_food_preference == 'c':
+        if bool(fridge.get_country_cuisine()) or fridge.get_food_preference == 'c':# the user preference is country cuisine or multiple country cuisine
             country_string_list = return_country_cuisine(fridge)
             print(country_string_list)
             start_notification(country_string_list,Fridge)
-            #parse_barcodes(country_string_list,fridge)
             exit()
         else:
             print('no country cuisine')
     else:
         print('There is not fridge element')
-                    #return_recipe_notification(raw1,fridge.content_list,recipe_id)
-
-
-
-
-
 
 
 
@@ -232,41 +225,16 @@ def map_ingredients_to_recipes(fridge):
 # 2 we will random select a special diet from special_diets and test is and all size
 # 3 we will  select a mix of recipes between a random special diet and a random country cuisine and test is and all size
 
-
-obj1 = fridge_el('sandwi-bread', 1)
-obj2 = fridge_el('dark chocolate and sea salt farm brothers',1)
-obj3 = fridge_el('buttermilks', 1)
-# obj3 = fridge_el('breadcorn', 1)
-# obj4 = fridge_el('red-pepper', 1)
-# obj5 = fridge_el('sage', 1)
-# obj6 = fridge_el('eggs', 1)
-# obj7 = fridge_el('onions', 1)
-# obj8 = fridge_el('g', 1)
-# obj9 = fridge_el('butter', 1)
-# obj10 = fridge_el('chicken-soup', 1)
-# obj11= fridge_el('chicken-stock', 1)
-# obj12 = fridge_el('pasta',1)
-# obj13= fridge_el('oil', 1)
-
-
-
 def add_sampled_elements_and_food_preference_to_fridge(n,food_preference):
-    print('callingggg')
     #fridge.set_food_preference() -- instead of letting the user set_food_preference, i create another function that return one of the three choice - country cuisine - special diet - or mixed recipes
     fridge.set_food_preference_for_test(food_preference)
     fridge_list,fridge_list_vec = sample_n_barcode(n)
     print('There are  ', len(fridge_list), 'in your fridge, with food_preference ', fridge.get_food_preference())
-
     for i in range(0,len(fridge_list)):
         print('this is ellll ', fridge_list[i])
         temp_obj = fridge_el(fridge_list[i],1)
         fridge.add(temp_obj)
-
-
-    #process_random_recipe_type()
     set_random_cuisine_recipe()
-
-    #print(fridge.get_country_cuisine())
 
 def set_random_cuisine_recipe():
     print('thisss ', fridge.food_preference)
@@ -292,32 +260,4 @@ def main():
 
 main()
 
-
-#fridge.add_country_cuisine('american')
-#fridge.add_country_cuisine('mexican')
-#fridge.add_diet('dairy-free')
-#fridge.add_diet('gluten-free')
-#print(fridge.get_diet())
-#print(fridge.get_country_cuisine())
-#fridge.add(obj3)
-
-
-#print(fridge.get_content_list())
-# fridge.add(obj4)
-# fridge.add(obj5)
-# fridge.add(obj6)
-# fridge.add(obj7)
-# fridge.add(obj8)
-# fridge.add(obj9)
-# fridge.add(obj10)
-# fridge.add(obj11)
-# fridge.add(obj12)
-# fridge.add(obj13)
-
-    ## two procedure
-    #1 - use a sequence model to determine the correlation between fridge ingredients and different ingredients in each recipe.
-    # So basically find the correlation between each ingredients in the fridge to first the title of the recipe, then ingredient in recipe.
-    # when a corellation of itemX is found in fridge and recipe, then I look at the recipe which has the highest correlation, call it Y,  and then check if in my
-    # fridge content there are a lot of correlation to recipe Y.
-    #2 --
 

@@ -12,32 +12,27 @@ import itertools
 import re
 
 
-
 def save_recipes(filename, recipe_dict):
     with open(filename, 'w') as f:
         json.dump(recipe_dict, f)
    
-def parse_ingredients(value):
+def parse_ingredients(value):#given a recipes with multiple ingredients in which the quantity, quantity type and ingredient are not separated. this function divides the three elements in a tuple so that they can be easily accesible 
     print('returning ingre')
     inner_recipes_dict = {}
     plus = False
     to = False
-    ## handle where that are multiple quantity
-    ##handle where quantity frequency is of multiple digits
-    #handle the 'to' and 'or' statement
+    #handle where that are multiple quantity
+    #handle where quantity frequency is of multiple digits
+    #handle the 'or' statement
     quantity_list = ['cup', 'Tbsp', 'bunch', 'grams', 'ounce', 'kg', 'ml', 'tsp','tbsp','cups', 'ounces', 'teaspoon','tablespoon','tablespoons','teaspoons', 'can', 'pinch', 'to_taste', 'for brushing'  ]
-    #print(raw_ingredients)
-    #print(recipe_name)
-    #print(type(value))
     full_ingredient = value
     quantity_type = 'Empty'
     r_id = 0
     delete_type = False
-    for tuple_index,tuple_el in enumerate(full_ingredient):
+    for tuple_index,tuple_el in enumerate(full_ingredient):#loop through all ingredients
         OR = False
         quantity = ''
         quantity_type = ''
-        print(tuple_el)
         delete_type  = False
         typeToDelete = list()
         for t_el in tuple_el[0].split(' '):
@@ -45,18 +40,17 @@ def parse_ingredients(value):
                 or_index  =tuple_el[0].find('or')
                 OR = True
                 break
+            else:
+                continue
             for type_list in quantity_list:
                 if t_el.lower().find(type_list) != -1:
-                    print('this is type_list found ', type_list)
                     if delete_type:
-                        print('second appending' , t_el)
                         if t_el not in typeToDelete:
                             typeToDelete.append(t_el.lower())
                             continue
                     else:
                         quantity_type = type_list
                         if t_el not in typeToDelete:
-                            print('appendinggg ' , t_el)
                             typeToDelete.append(t_el.lower())
                             delete_type = True
                             continue
@@ -65,36 +59,24 @@ def parse_ingredients(value):
         print('this is quantity_type ', quantity_type)
         print('this is what to delete', typeToDelete)
         ingre =  tuple_el[0].lower()
-        if OR:
+        if OR:#if or is present, it means there are multiple options for one ingredients, we want to eliminate this, so we only choose the first option and not consider everything after the 'or'
             ingre = ingre[0:or_index-1]
             for el in typeToDelete:
-                print('pre or  deleting ', ingre)
                 ingre = ingre.replace(el,'')
-                print('ingre at  or deleting ', ingre)
-            print('this is or ingre', ingre)
-            print('this is OR  quantity_type ', quantity_type)
         else:
-            print('not orrrrr')
             for el in typeToDelete:
-                print('pre deleting ', ingre)
                 ingre = ingre.replace(el,'')
-                print('ingre at deleting ', ingre)
         quantity =  tuple_el[1]
         parsed_ingredient = ((ingre,quantity,quantity_type))
-        print('this is important temp tupleeeeeeeeeeeeeeee  ',  parsed_ingredient)
-        #print('temp with quantity'  ,temp_tuple)
         inner_recipes_dict[r_id] = parse_semantic(ingre) ##returns the cleaned version of the ingredient
-        print('this is options', inner_recipes_dict[r_id])
-        r_id += 1
-        #print('this is optionsssss' , parse_semantic(nlp(ingre)))##parsing ingredients from special recipes 
-          
+        r_id += 1 
     return inner_recipes_dict
 
 def mix_country_with_diet_recipes(fridge,special_diet_name):
     country_recipes_list =  return_country_cuisine(fridge)
     special_recipes_list =  return_all_special_diets(fridge,special_diet_name)
     mixed_recipes  = list(itertools.chain.from_iterable(zip(country_recipe_dict,special_recipes_list)))
-    parse_barcodes(mixed_recipe,fridge)
+    start_notification(mixed_recipes, fridge)
 
 
 def return_country_cuisine(fridge):
@@ -111,21 +93,17 @@ def return_country_cuisine(fridge):
             for el in raw:
                 el = re.sub(r'[^\w\s]','',el)
                 el = re.sub(r"\s+", ' ', el.lstrip())
-                print(el)
                 raw1.append(el)
-            print('this is raw recipe', raw1)
             temp_dict = {}
             temp_dict [recipe_id+'-'+key] = raw1 ##the key of the dictionary - recipe_id which is a digit that maps the recipe and key is the country key in dictionary fridge.get_coutnry_cuisine()
             recipe_string_list.append(temp_dict)
             if int(recipe_id) > 10:
                 return recipe_string_list
-               
     return recipe_string_list
 
 def return_all_special_diets(fridge,special_diet_name,size):
     all_special_diets = {}
     recipe_list = list()
-    print('this is recipe size ', recipe_list)
     for recipe_name,ingredients in fridge.get_diet()[special_diet_name].items():
         special_diet_ingredients = list()
         for name,quantity in ingredients.items():
@@ -135,35 +113,23 @@ def return_all_special_diets(fridge,special_diet_name,size):
             special_diet_ingredients.append((ingre_name,quantity))
         all_special_diets[recipe_name]= special_diet_ingredients
     for r_name,recipe in all_special_diets.items():
-        print('parsing ingreeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee')
         temp_dict = {}
         temp_dict[r_name] =  list(parse_ingredients(recipe).values())
-        print('one recipe ', temp_dict[r_name])
-        #print('temp_dict ', temp_dict)
+        print(temp_dict)
+        exit()
         recipe_list.append(temp_dict)
         if len(recipe_list) >= size and size != None:
             return  recipe_list
-
     return recipe_list
     
-def map_ingredients_to_special_diets(fridge):#object fridge passed
-    print('mapping special diets')
+def map_ingredients_to_special_diets(fridge):
     all_special_diets = {}
     all_fridge_special_diets = {}
     recipe_list = list()
     all_fridge_special_diets =  fridge.get_diet()
     for special_diet_name in all_fridge_special_diets.keys():
-        print('output')
         all_special_diets[special_diet_name] = return_all_special_diets(fridge,special_diet_name,1)
-        #print('return of return all special ', all_fridge_special_diets[special_diet_name])
-        print('at dieeett ', special_diet_name)
-        print('this is list of  speceial recipes '  ,all_special_diets)
     for diet,recipes in all_special_diets.items():
         recipe_list =  recipe_list + recipes
     if len(recipe_list) >= 1 :
         start_notification(recipe_list,fridge)
-        #parse_barcodes(recipe_list,fridge)
-        print('these are recipes ', recipe_list)
-        exit()
-                #exit()
-            ## this returns the parsed ingredients of recipes - after this compare it to the fridge el 

@@ -58,7 +58,6 @@ def parse_semantic(not_doc):
     token_pos = list()
     print(' ')
     print('this is entire doc',doc)
-    # print('this is entyty: ', doc.ents, 'of doc ', doc)
     token_dep = list([[t.dep_,t.text] for t in doc])
     token_pos =list([[t.pos_, t.text]for t in doc])
     tokens = list()
@@ -81,17 +80,16 @@ def parse_semantic(not_doc):
     for el in token_dep: #set semantic depth for doc
         if 'ROOT' in el and flag:
             ROOT = True
-            print('ROOOOOOOOOOOOOOOOOT')
+            #print('ROOOOOOOOOOOOOOOOOT')
             doc = nlp(el[1])
             for t in doc:
                 print(t.pos_)
                 if t.pos_ == 'ADP' or t.pos_ == 'CONJ' or t.pos_ == 'ADJ' or t.pos_ == 'VERB': ##keep in mind that as adj can be good ????!!!!!
-                    print('bad root')
+                    #print('bad root')
                     print('root position', t.pos_)
                     ROOT = False
                     break
             if ROOT:
-                print('setting flag to false')
                 root_text.append(el[1])
                 flag = False
         if 'nsubj' in el:
@@ -122,15 +120,11 @@ def parse_semantic(not_doc):
         if 'dobj' in el:
             compound = True
             compound_text.append(el[1])
-        #if 'appos' in el:
-         #   compound = True
-         #   compound_text.append(el[1])
         if 'nmod' in el:
             compound = True
             compound_text.append(el[1])
 
     for pos in token_pos: ## set semantic position for doc
-    # print('this is pos', pos)
         if 'NOUN' in pos:
             if pos[1] not in root_text and pos[1] not in noun_text:
                 noun_text.append(pos[1])
@@ -160,18 +154,6 @@ def parse_semantic(not_doc):
 
     print('this is root', ROOT, '== ', root_text , 'and compound', compound, 'and nsujb',nsubj )
 
-    #if ROOT and entity: ##if root and entity similar return only entity, there is no neeed to return semantic
-    #    for r in root_text:
-    #        if r in entity_text and r != entity_text:
-    #            print('GOODDDD ROOT AND ENTITY')
-    #            replacement = entity_text
-    #            print('this replacement', replacement)
-    #            return replacement
-    #        else:
-    #            continue
-
-        
-    
     if ROOT and nsubj and compound:
         print('root and  nsubjjjjjjjjjjjjjjjjjjjjjjjj')
         nsubj_sorted  = spacy_closest(nsubj_text,vec(root_text[0]), len(nsubj_text))
@@ -185,7 +167,6 @@ def parse_semantic(not_doc):
             return root_text[0]+' '+nsubj_sorted[0]+' '+sorted_compound_all[0]
         else:
             return root_text[0]+' '+nsubj_sorted[0]
-        #sorted_all = spacy_closet(nsubj_sorted+compound_sorted)
 
     if ROOT and compound:
         print('root and compounddddddddddddddddddddddddddddddddddd')
@@ -200,10 +181,6 @@ def parse_semantic(not_doc):
                 print('elimination number for noun and root', counter_elimation)
             temp_sorted_noun = sorted_noun[0:(len(sorted_noun)-counter_elimation)]
             print('this is sorted noun', temp_sorted_noun)
-            #if sorted_adj:##adj is usually pretty bad or redudant for syntax contest
-            #   noun_adj = spacy_closest( sorted_adj,sentvec(''.join(sorted_noun[0:(len(sorted_noun)-counter_elimation)])),len(sorted_adj) )
-            #  temp_sorted_noun.append(noun_adj[0])
-            #  print('this is sorted adj for root and noun', temp_sorted_noun)
             if root_text[0] in sorted_noun:
                 print('noun root solo', temp_sorted_noun)
             else:
@@ -241,29 +218,6 @@ def parse_semantic(not_doc):
                 return ' '.join(temp_propn)
         else:
              return root_text[0]+' '+compound_text[0]   
-        #if len(tokens) >= 3:
-            #counter_elimation = int(len(tokens)/2) 
-            #print('elimination number', counter_elimation)
-        #print('this is tokens', tokens)
-        #list_compound = spacy_closest(tokens, vec(root_text[0]), len(tokens))
-        #print('full compound list'  ,list_compound)
-        #if len(list_compound) >= 2:
-            #tokens.remove(list_compound[0])
-            #temp_sorted = spacy_closest(tokens,sentvec(root_text[0]+' '+list_compound[0]), len(tokens))
-            #print('temp sort', temp_sorted, 'with root', root_text[0], 'and best token', list_compound[0] )
-            #print('possible optionssssssssssssssssssss', root_text[0]+' '+list_compound[0]+' '+ temp_sorted[0])
-            #print( ' ')
-        #else:
-            #print('comopund is short')
-            #print('options is root and one compound', root_text[0]+' '+list_compound[0])
-            #print(' ')
-        #print('filtered list' , ' '.join(list_compound[0:(len(list_compound)-counter_elimation)]))
-        #if root_text[0] in ' '.join(list_compound[0:(len(list_compound)-counter_elimation)]):
-            #print('root is present')
-            #return ' '.join(list_compound[0:(len(list_compound)-counter_elimation)])
-        #else:
-            #return root_text[0]+' '+' '.join(list_compound[0:(len(list_compound)-counter_elimation)])
-   
     if nsubj and compound:
         list_compound = spacy_closest(compound_text, vec(nsubj_text[0]), len(compound_text))
         print('only nsubj plus compound', nsubj_text)
@@ -318,131 +272,3 @@ def parse_semantic(not_doc):
     
     print('WAS NOT ENOUGHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHH')
     return 'None'
-  
-    #return ' '.join( return_semantic(NOUN,PROPN,ADJ,ROOT,noun_text,propn_text,adj_text,root_text)) #return semantic
-
-def return_semantic(NOUN,PROPN,ADJ,ROOT,noun_text,propn_text,adj_text,root_text):
-##check for the root, if root is a verb do not take into consideration
-    counter += 1
-    print('this is counter' ,counter)
-
-    print('semanticccccccccccccccccccccccccccccccccccccccccc')
-    counter_elimation = 0
-    options = list()
-    if NOUN and ROOT:
-        sorted_noun  = spacy_closest(noun_text, vec(root_text[0]), len(noun_text))
-        sorted_adj  = spacy_closest(adj_text, vec(root_text[0]) , len(adj_text))
-        if len(sorted_noun) > 3:
-            counter_elimation = int(len(sorted_noun)/2) 
-            print('elimination number for noun and root', counter_elimation)
-        print('this is sorted noun', sorted_noun)
-        temp_sorted_noun = sorted_noun[0:(len(sorted_noun)-counter_elimation)]
-
-        if sorted_adj:
-            noun_adj = spacy_closest( sorted_adj,sentvec(''.join(sorted_noun[0:(len(sorted_noun)-counter_elimation)])),len(sorted_adj) )
-            temp_sorted_noun.append(noun_adj[0])
-            print('this is sorted adj for root and noun', temp_sorted_noun)
-        if root_text[0] in sorted_noun:
-            return temp_sorted_noun
-        else:
-            temp_sorted_noun.append(root_text[0])
-            return temp_sorted_noun
-        
-    if PROPN and ROOT:
-        sorted_propn  = spacy_closest(propn_text, vec(root_text[0]), len(propn_text))
-        sorted_adj  = spacy_closest(adj_text, vec(root_text[0]),len(adj_text))
-        print('this is sorted propn', sorted_propn)
-        print('this is sorted adj', sorted_adj)
-        if len(sorted_propn) > 3:
-            counter_elimation = int(len(sorted_propn)/2) 
-            print('elimination number for noun and root', counter_elimation)
-        temp_propn = sorted_propn[0:(len(sorted_propn)-counter_elimation)] 
-        if sorted_adj:
-            propn_adj = spacy_closest(sorted_adj,sentvec(''.join(sorted_propn[0:(len(sorted_propn)-counter_elimation)])), len(sorted_adj))
-            print('this is sorted adj for root and propn', propn_adj)
-            temp_propn.append(propn_adj[0])
-
-        if root_text[0] in sorted_propn:
-            return temp_propn
-        else:
-            temp_propn.append(root_text[0])
-            return temp_propn
-            
-    if NOUN and ADJ == False :
-        print('going double noun')
-        n1 = ''
-        n2  =''
-        n1_aCosine=  0
-        for n in noun_text:
-            for n1 in noun_text:
-                print('this is cosine between nouns',cosine(vec(n),vec(n1)) , 'n ', n , 'n1 ', n1)
-                if cosine(vec(n),vec(n1)) > n1_aCosine and n != n1:
-                    n1 = n
-                    n2 = n1
-                    n1_aCosine = cosine(vec(n),vec(n1))
-                else:
-                    continue
-        if n1 and n2:
-            options.append(n1+' '+n2)
-            print('this is options ', options)
-            return options
-        else:
-            options.append(n1)
-            print('bad noumsss')
-            return options
-
-        
-    if NOUN and ADJ:
-        adj = ''
-        noun = ''
-        print('noun , adj')
-        for n in noun_text:
-            sorted_adj = spacy_closest(adj_text,vec(n), len(adj_text))
-            print('this is sorted', sorted_adj, 'for noun', n)
-        exit()
-        n_aCosine = 0
-        for n in noun_text:
-            for a in adj_text:
-                if cosine(vec(n),vec(a)) > n_aCosine and cosine(vec(n),vec(a)) < 0.95:
-                    noun = n
-                    adj = a
-                    n_aCosine = cosine(vec(n),vec(a))
-                else:
-                    continue
-        if noun and adj:
-            options.append(adj+' '+noun)
-            print('this is options ', options)
-            return options
-        else:
-            print('going double noun')
-            n1 = ''
-            n2  =''
-            n1_aCosine=  0
-            for n in noun_text:
-                for n1 in noun_text:
-                    if cosine(vec(n),vec(n1)) > n1_aCosine and cosine(vec(n),vec(n1)) < 0.95:
-                        n1 = n
-                        n2 = n1
-                        n1_aCosine = cosine(vec(n),vec(n1))
-                    else:
-                        continue
-            if n1 and n2:
-                options.append(n1+' '+n2)
-                print('this is options ', options)
-                return options
-            else:
-                print('bad noumsss')
-                return None
-    if PROPN:
-        print('only propnsssssss')
-        print('need to chcek this')
-        options.append(propn_text[0])
-        return options
-    if ROOT:
-        print('rooting only')
-        options.append(root_text[0])
-        return options
-
-    print('this is a bad items')
-    options.append('None')
-    return options
