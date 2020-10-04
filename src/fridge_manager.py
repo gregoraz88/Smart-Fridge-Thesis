@@ -116,18 +116,18 @@ class fridge_contet:
     def get_diet(self):
         return self.diet_dict
     def add(self,fridge_el):
-        print('fridge',  fridge_el.name, self.content_list)
+        #print('fridge',  fridge_el.name, self.content_list)
         if self.is_content_list_empty():
-            print('list is empty')
+            #print('list is empty')
             self.content_list[fridge_el.name] = fridge_el
-            print('thiis objs from content' , self.content_list[fridge_el.name])
+            #print('thiis objs from content' , self.content_list[fridge_el.name])
         else:
             if fridge_el.name in self.content_list:
                 self.increment_freq(fridge_el)
             else:
                 self.content_list[fridge_el.name] = fridge_el
                 self.increment_freq(fridge_el)
-                print(self.content_list)
+                #print(self.content_list)
 
 
     def increment_freq(self,fridge_el):
@@ -201,7 +201,7 @@ def map_ingredients_to_recipes(fridge):
 
         if bool(fridge.get_diet()) or fridge.get_food_preference == 'd':# the user preference is a special diet or multiple special diets
             print('speciallllllllllllllllllllll')
-            map_ingredients_to_special_diets(fridge)
+            map_ingredients_to_special_diets(fridge,5)
             exit()
         else:
             print('no diettt recipes')
@@ -231,10 +231,12 @@ def add_sampled_elements_and_food_preference_to_fridge(n,food_preference):
     fridge_list,fridge_list_vec = sample_n_barcode(n)
     print('There are  ', len(fridge_list), 'in your fridge, with food_preference ', fridge.get_food_preference())
     for i in range(0,len(fridge_list)):
-        print('this is ellll ', fridge_list[i])
+        #print('this is ellll ', fridge_list[i])
         temp_obj = fridge_el(fridge_list[i],1)
         fridge.add(temp_obj)
+    
     set_random_cuisine_recipe()
+    print('We will map the following ingredient: ', list(fridge.get_content_list()), 'with the following diet: ', list(fridge.get_diet().keys()) )
 
 def set_random_cuisine_recipe():
     print('thisss ', fridge.food_preference)
@@ -247,14 +249,13 @@ def set_random_cuisine_recipe():
     if fridge.food_preference == 'd':
         with open(diet_path) as json_file:
             recipes_data = json.load(json_file)
-        print(random.choice(list(recipes_data.keys())))
         fridge.add_diet(random.choice(list(recipes_data.keys())))
 
       
 fridge = fridge_contet('JIM')
      
 def main():
-    add_sampled_elements_and_food_preference_to_fridge(10,'d')
+    add_sampled_elements_and_food_preference_to_fridge(50,'d')
     map_ingredients_to_recipes(fridge)
     exit()
 

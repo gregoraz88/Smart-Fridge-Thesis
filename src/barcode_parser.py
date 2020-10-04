@@ -133,29 +133,33 @@ def start_notification(recipes,fridge_obj):#this function starts the notificatio
         process_notification(n_obj)
         
 def compareFridge_toRecipeIngre(split_fridge,split_recipe): #return missing element,similar element and,close element between fridge ingre and recipe ingre
+    print('calling comparinggg')
     tempSimilar = list()
     close_temp = list()
     diffFridgeComp = list()
     for r in split_recipe:
+        if r == None or r == '' or r == ' ':
+            continue
         for f in split_fridge:
-            print('this is super inner cosine ', cosine(vec(r),vec(f) ),'for recipe ', r , 'for fridge ', f)
+            #print('this is super inner cosine ', cosine(vec(r),vec(f) ),'for recipe ', r , 'for fridge ', f)
             if cosine(vec(r),vec(f)) >= 0.90:
-                print('PLUSSSSSSSSSSSSSSSSSSSS for r ', r , 'with f ', f)
+                #print('PLUSSSSSSSSSSSSSSSSSSSS for ', r , 'with ', f)
                 print('thre is a match')
                 if f not in tempSimilar:
                     tempSimilar.append(f)
                 continue
             else:
-                print('bad cosine ratio for r ' , r,  ' with f ', f  )
+                #print('bad cosine ratio for  ' , r,  ' with  ', f  )
                 if f not in diffFridgeComp:
-                    print('f not in diff ,  ',  f)
+                    #print('f not in diff ,  ',  f)
                     diffFridgeComp.append(f)
                 continue
     if tempSimilar:
-        print('this is diffFridgeComp before intersectioon ' , diffFridgeComp)
+        #print('this is diffFridgeComp before intersectioon ' , diffFridgeComp)
         whatisMissing =list(set(split_recipe) - set(tempSimilar))
         diffFridgeComp = list(set(diffFridgeComp) - set(tempSimilar))
         whatisPresent = tempSimilar
+        print('missing ', whatisMissing, 'present ', whatisPresent, 'temp close ', close_temp, 'temp similar ' , tempSimilar)
         return whatisMissing,whatisPresent,close_temp,diffFridgeComp
 
     else:
@@ -199,6 +203,7 @@ def parse_barcodes(dict_of_recipe,fridge_obj):#this function returns a list of c
     for recipe_dict in dict_of_recipe:
         list_of_recipe.append((  ( list( itertools.chain.from_iterable( (list(recipe_dict.values())) ) ) ) , list(recipe_dict.keys()) ))
     similar_ingredient = False
+    similarityCounter=  0
     similar_ingredient_ind =list()
     possible_options = list()
     cosine_val  = 0.0
@@ -206,7 +211,7 @@ def parse_barcodes(dict_of_recipe,fridge_obj):#this function returns a list of c
     if fridge_obj.return_content_size() > 2:##return content list size
         for recipe in list_of_recipe: ## recipe contains - [0] -- recipe ingredients [1] -- recipe_id
             recipe_doc = nlp(' '.join(recipe[0]))
-            print('doc', recipe_doc)
+            #print('doc', recipe_doc)
             if check_extension(fridge_obj.get_content_list(),recipe_doc)[0]:#if check_extension returns true we start comparing each element of two dataset
                 print('EXTENSION TRUE WITH RECIPE', recipe[0])
                 recipe_string_list = recipe[0]
@@ -215,23 +220,25 @@ def parse_barcodes(dict_of_recipe,fridge_obj):#this function returns a list of c
                     vectorized_fridge_name = obj.return_vec_string()
                     print(' ')
                     if cosine(sentvec(' '.join(recipe_string_list )), sentvec(obj.name)) >= 0.70:
-                        print('this is the cosine: ',cosine(sentvec(' '.join(recipe_string_list )), sentvec(obj.name)), 'for fridge el', obj.name,'and recipe ingredient sent ', ' '.join(recipe_string_list ) )
+                        similar_ingredient = False
+                        #print('this is the cosine: ',cosine(sentvec(' '.join(recipe_string_list )), sentvec(obj.name)), 'for fridge el', obj.name,'and recipe ingredient sent ', ' '.join(recipe_string_list ) )
                         for j in range(0,len(vectorized_fridge_name)):
-                            if not vectorized_fridge_name or vectorized_fridge_name == '':
-                                print('contnueeeeee for fridge', vectorized_fridge_name)
+                            if not vectorized_fridge_name or vectorized_fridge_name == '' and similar_ingredient == True:
+                                #print('contnueeeeee for fridge', vectorized_fridge_name)
                                 continue
                             for g in range(0,(len(recipe_string_list))):
                                 if cosine(vec(vectorized_fridge_name[j]), sentvec(recipe_string_list[g])) > 0.75: 
-                                    similar_ingredient = True
-                                    if cosine(sentvec(obj.name), sentvec(recipe_string_list[g])) >= 0.83:
+                                    print('inner correlation ' , vectorized_fridge_name[j],' ',  recipe_string_list[g] )
+                                    if cosine(sentvec(obj.name), sentvec(recipe_string_list[g])) >= 0.80:
+                                        print('There is correlation between ' , obj.name,' '  ,recipe_string_list[g])
                                         cosine_val = cosine(sentvec(obj.name), sentvec(recipe_string_list[g]))
-                                        similarityCounter =  0
                                         ##pass the id of object and find it in content_list
+                                        similar_ingredient = True
                                         similar_ingredient_ind.append((obj,j,g,r_id,cosine_val))
                                         split_recipe  = recipe_string_list[g].split(' ')
                                         split_fridge = obj.name
-                                        print('this is spit recipe' , split_recipe)
-                                        print('this is split fridge' , split_fridge)
+                                        #print('this is spit recipe' , split_recipe)
+                                        #print('this is split fridge' , split_fridge)
                                 else:
                                     continue
                     else:
@@ -253,15 +260,25 @@ def Print_notification(n_obj):#print notification for recipes in which there is 
     recipe_list = list()
     recipe_dictionary = {}
     #make a dictionary out of list of dictionary
+    keys = list()
+    values  = list()
     for dict_r in n_obj.dict_of_recipe:
-        keys = list()
-        values  = list()
         keys.append(list(dict_r.keys())[0])
         values.append(list(dict_r.values())[0])
     recipe_dictionary = dict(zip(keys, values))
+    print('this is reciepe dictionary ' ,recipe_dictionary.keys())
+    print()
+    print('this are the fridge ingredients ' , n_obj.fridge_obj.get_content_list())
+
+
+    print('items for notification ', n_obj.notification_outputDict.items())
 
     #prepare the printing for each recipe, print both the similar ingredient and the missing ingredients if there are any.
     for recipe_key, possible_ingredients in n_obj.notification_outputDict.items():
+        print()
+        print('recipe key ', recipe_key)
+        print('possible ingredients ', possible_ingredients)
+        print()
         missing_ingredients = list(recipe_dictionary[recipe_key])
         for tuple_el in possible_ingredients:
             missing_ingredients.remove(str(tuple_el[1]))
@@ -274,6 +291,8 @@ def Print_notification(n_obj):#print notification for recipes in which there is 
            
 
 def processComparison(split_fridge,split_recipe):#process an external comparison between recipe and ingredient correlation of what the 'compareFridge_toRecipeIngre' returns, check what are the main differnces and similarities between the two correlated ingredients
+    print(' ')
+    print('process comparison')
     if compareFridge_toRecipeIngre(split_fridge,split_recipe)[1] != None:
         missingElements,similarElements,closeElements,differenceInFridge = compareFridge_toRecipeIngre(split_fridge,split_recipe)
     
@@ -281,12 +300,12 @@ def processComparison(split_fridge,split_recipe):#process an external comparison
             return (True,'No missing',split_fridge,[],split_recipe)
             
         if not missingElements:
-            print('nothing missing for recipe but some extra ingree, this is what is extra from fridge ',differenceInFridge )
+            #print('nothing missing for recipe but some extra ingree, this is what is extra from fridge ',differenceInFridge )
             return (True,'No missing',split_fridge,[],split_recipe)
             
         if missingElements and differenceInFridge:
             notToBad = 0
-            print('there is something missing and something extra')
+            #print('there is something missing and something extra')
             for m in missingElements:
                 for f in differenceInFridge:
                     if cosine(sentvec(m), sentvec(f)) >= 0.7:
@@ -296,16 +315,16 @@ def processComparison(split_fridge,split_recipe):#process an external comparison
                     else:
                         continue
             if notToBad >= 1:
-                print('adding while something missing')
+                #print('adding while something missing')
                 return (True,'Incomplete_High',missingElements,differenceInFridge,similarElements)
             else:
-                return (False,'Incomplete_Low',missingElements,differenceInFridge,similarElements)
+                return (True,'Incomplete_Low',missingElements,differenceInFridge,similarElements)
                                             
         if  differenceInFridge:
             good_extra = list()
             bad_extra = list()
             notToBad = 0
-            print('there is something extra in fridge')
+            #print('there is something extra in fridge')
             for f in differenceInFridge:
                 for s in similarElements:
                     if cosine(sentvec(f), sentvec(s)) >= 0.80:
@@ -316,19 +335,19 @@ def processComparison(split_fridge,split_recipe):#process an external comparison
                         bad_extra.append( (f,s))
                         continue
             if good_extra:
-                    print('adding while something extra is in fridge')
+                    #print('adding while something extra is in fridge')
                     return (True,'Good_Extra' , [],good_extra,bad_extra,similarElements)
             else:
                 return (True, 'Bad_Extra', [],[], bad_extra,similarElements)
 
         if missingElements:
-            print('only missing ingredientsssssssss')
+            #print('only missing ingredientsssssssss')
             return ('True', 'Missing', missingElements,similarElements)
         else:
             print('look more in depthhhhhhhhhhhhhhhhhhhhhh')
     else:
         print('no correlation between fridge ',  split_fridge,' to recipe ' ,split_recipe)
-        print('this is badddddddddddddddddddddd cosine for inner fridge el',fridge_list[i],' and recipe ingredient' , recipe_string_list[g], cosine(sentvec(fridge_list[i]), sentvec(recipe_string_list[g])))
+        #print('this is badddddddddddddddddddddd cosine for inner fridge el',fridge_list[i],' and recipe ingredient' , recipe_string_list[g], cosine(sentvec(fridge_list[i]), sentvec(recipe_string_list[g])))
         return (False,'Bad')
 
 def make_notification(n_obj):#in this function we updated we set_notification_output and we make sure only relevant correlations are used to set_notification_output, this function updates a the notification_outputDict dictionary, in which per each recipes we have the interested correlations. 
@@ -336,6 +355,7 @@ def make_notification(n_obj):#in this function we updated we set_notification_ou
     notification_outputDict = {}
     for dict_r in n_obj.dict_of_recipe:
         if n_obj.recipe_name in dict_r.keys():
+            print()
             print('U have a correlation with recipe :'  , n_obj.recipe_name )
             split_recipe  = list(dict_r[n_obj.recipe_name])[n_obj.ingre].split(' ')#one element of the recipe at ingre
             split_fridge = n_obj.id.return_vec_string() # one fridge element at i
@@ -348,26 +368,26 @@ def make_notification(n_obj):#in this function we updated we set_notification_ou
                     first_temp = list()
                     first_temp.append((n_obj.id.name , list(dict_r[n_obj.recipe_name])[n_obj.ingre], n_obj.cosine_value,len(comparison[2])))
                     notification_outputDict[n_obj.recipe_name] = first_temp
-                    print('this is notification output ', notification_outputDict)
                     n_obj.set_notification_output(notification_outputDict)
                     continue
                 else:
                     print('bad estimation')
                     continue
             else:# if there is already an element similar in recipe name
+                
                 temp_el = n_obj.notification_outputDict[n_obj.recipe_name]
                 comparison = processComparison(split_fridge,split_recipe)
                 if comparison[0]:
                     if  (n_obj.id.name,list(dict_r[n_obj.recipe_name])[n_obj.ingre],n_obj.cosine_value, len(comparison[2]) ) not in  temp_el:
+                        print('NOT IN DICT ', n_obj.id.name)
                         check = False
                         cosine_flag = False
                         better_value = ''
                         for value in n_obj.notification_outputDict[n_obj.recipe_name]:
                             if value[1] == list(dict_r[n_obj.recipe_name])[n_obj.ingre]:
                                 check =  True
-                                if value[2] > n_obj.cosine_value:# if the cosine of the fridge ingredient already correlated with a recipe is higher than tthe current comparison, keep the previous comparison
+                                if value[2] > n_obj.cosine_value:# if the cosine of the fridge ingredient already correlated with a recipe is higher than the current comparison, keep the previous comparison
                                     cosine_flag =  True
-                                    print(value)
                                     break
                                 else:
                                     to_switch = value
@@ -375,7 +395,18 @@ def make_notification(n_obj):#in this function we updated we set_notification_ou
                                     break         
                             else:
                                 continue
-                                   
+
+                            if value[0] == n_obj.id.name:
+                                if value[2] > n_obj.cosine_value:
+                                    continue
+                                else:
+                                    print(value[0] ,' and ', n_obj.id.name, ' are the same, and cosine value is bigger at nobj ', n_obj.cosine_value ,  ' ,', value[2])
+                                    temp_el.remove(value)
+                                    check = False
+                            else:
+                                continue
+                            
+                                
                         if not check:
                             temp_el.append((n_obj.id.name , list(dict_r[n_obj.recipe_name])[n_obj.ingre], n_obj.cosine_value, len(comparison[2])))
                             notification_outputDict[n_obj.recipe_name] = temp_el
@@ -404,6 +435,7 @@ def return_missing_and_similar_notification(n_obj):
     country = False
     for output in n_obj.similar_ingredient_ind:
         n_obj.set_notification_parameter(output)#for each correlation the notification parameters are updated, this defines the ingredients of both datasets and the recipe of interest of that correlation.
+        print('before calling make not ' ,n_obj.ingre)
         make_notification(n_obj)
     Print_notification(n_obj)
      
