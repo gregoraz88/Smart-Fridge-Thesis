@@ -201,7 +201,7 @@ def map_ingredients_to_recipes(fridge):
 
         if bool(fridge.get_diet()) or fridge.get_food_preference == 'd':# the user preference is a special diet or multiple special diets
             print('speciallllllllllllllllllllll')
-            map_ingredients_to_special_diets(fridge,5)
+            map_ingredients_to_special_diets(fridge,1)#map fridge obj to 10 recipes of the special diets
             exit()
         else:
             print('no diettt recipes')
