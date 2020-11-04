@@ -80,11 +80,11 @@ def mix_country_with_diet_recipes(fridge,special_diet_name):
     start_notification(mixed_recipes, fridge)
 
 
-def return_country_cuisine(fridge):
+def return_country_cuisine(fridge,recipe_size):
     recipe_string_list = list()
     country_recipe_dict =  fridge.get_country_cuisine()
     for key , informations in country_recipe_dict.items():
-        print(key)
+        #print(key)
         # recipes key are : id, recipeName, rating,totalTimeInSeconds, course, cuisine,ingredients
         for recipe_id,value in informations['ingredients'].items():
             print('this is recie',recipe_id)
@@ -98,7 +98,7 @@ def return_country_cuisine(fridge):
             temp_dict = {}
             temp_dict [recipe_id+'-'+key] = raw1 ##the key of the dictionary - recipe_id which is a digit that maps the recipe and key is the country key in dictionary fridge.get_coutnry_cuisine()
             recipe_string_list.append(temp_dict)
-            if int(recipe_id) > 10:
+            if int(recipe_id) >= recipe_size:
                 return recipe_string_list
     return recipe_string_list
 

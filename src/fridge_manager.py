@@ -52,7 +52,9 @@ class fridge_contet:
         if fridge_list_vec is None:
             self.fridge_list_vec = list()
     def get_content_list(self):
-        return self.content_list.keys()  
+        return self.content_list.keys() 
+    def get_len_content_list(self):
+        return len(self.content_list.keys())
     def get_obj_content_list(self):
         return self.content_list.values()
     def is_content_list_empty(self):
@@ -67,6 +69,8 @@ class fridge_contet:
         else:
             print('there is no such a country cuisine, sorry try again')
     def get_country_cuisine(self):
+        #print('country dict ',self.country_cuisine_dict)
+        #print('keys ', self.country_cuisine_dict)
         return self.country_cuisine_dict
 
     def check_country_and_diet_cuisine(self):
@@ -201,14 +205,14 @@ def map_ingredients_to_recipes(fridge):
 
         if bool(fridge.get_diet()) or fridge.get_food_preference == 'd':# the user preference is a special diet or multiple special diets
             print('speciallllllllllllllllllllll')
-            map_ingredients_to_special_diets(fridge,1)#map fridge obj to 10 recipes of the special diets
+            map_ingredients_to_special_diets(fridge,1)#map fridge obj to 1 recipes of the special diets
             exit()
         else:
             print('no diettt recipes')
         if bool(fridge.get_country_cuisine()) or fridge.get_food_preference == 'c':# the user preference is country cuisine or multiple country cuisine
-            country_string_list = return_country_cuisine(fridge)
-            print(country_string_list)
-            start_notification(country_string_list,Fridge)
+            country_string_list = return_country_cuisine(fridge,5)
+            print('Country recipe List' , country_string_list)
+            start_notification(country_string_list,fridge)
             exit()
         else:
             print('no country cuisine')
@@ -236,10 +240,10 @@ def add_sampled_elements_and_food_preference_to_fridge(n,food_preference):
         fridge.add(temp_obj)
     
     set_random_cuisine_recipe()
-    print('We will map the following ingredient: ', list(fridge.get_content_list()), 'with the following diet: ', list(fridge.get_diet().keys()) )
+    print('We will map the following ingredient: ', list(fridge.get_content_list()) )
+    print(' ')
 
 def set_random_cuisine_recipe():
-    print('thisss ', fridge.food_preference)
     if fridge.food_preference == 'c':
         with open(cuisine_path) as json_file:
             recipes_data = json.load(json_file)
@@ -255,7 +259,7 @@ def set_random_cuisine_recipe():
 fridge = fridge_contet('JIM')
      
 def main():
-    add_sampled_elements_and_food_preference_to_fridge(50,'d')
+    add_sampled_elements_and_food_preference_to_fridge(30,'c')
     map_ingredients_to_recipes(fridge)
     exit()
 
