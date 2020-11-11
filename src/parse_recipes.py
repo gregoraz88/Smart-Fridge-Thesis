@@ -80,7 +80,7 @@ def mix_country_with_diet_recipes(fridge,special_diet_name):
     start_notification(mixed_recipes, fridge)
 
 
-def return_country_cuisine(fridge,recipe_size):
+def map_ingredients_to_country_cuisine(fridge,recipe_size):
     recipe_string_list = list()
     country_recipe_dict =  fridge.get_country_cuisine()
     for key , informations in country_recipe_dict.items():
@@ -99,8 +99,8 @@ def return_country_cuisine(fridge,recipe_size):
             temp_dict [recipe_id+'-'+key] = raw1 ##the key of the dictionary - recipe_id which is a digit that maps the recipe and key is the country key in dictionary fridge.get_coutnry_cuisine()
             recipe_string_list.append(temp_dict)
             if int(recipe_id) >= recipe_size:
-                return recipe_string_list
-    return recipe_string_list
+                start_notification(recipe_string_list,fridge, key)
+                break
 
 def return_all_special_diets(fridge,special_diet_name,size):
     all_special_diets = {}
@@ -136,6 +136,13 @@ def map_ingredients_to_special_diets(fridge,size):
     for special_diet_name in all_fridge_special_diets.keys():
         all_special_diets[special_diet_name] = return_all_special_diets(fridge,special_diet_name,size)
     for diet,recipes in all_special_diets.items():
+        print('this is diet ', diet)
+        print()
+        print('this is recipes ', recipes)
         recipe_list =  recipe_list + recipes
         if len(recipe_list) >= size-1 :
-            start_notification(recipe_list,fridge)
+            print('recipes before notification ', recipe_list)
+            start_notification(recipe_list,fridge,diet)
+            recipe_list = list()
+            #print('this is step ' , recipe_list,'   ' , fridge.get_diet().keys())
+            continue

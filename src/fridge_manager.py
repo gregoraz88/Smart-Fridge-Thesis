@@ -4,7 +4,7 @@ import re
 from sklearn.feature_extraction.text import TfidfVectorizer,CountVectorizer,TfidfTransformer
 from map_ingredients_to_fridge import return_recipe_notification
 from barcode_parser import parse_barcodes 
-from parse_recipes import map_ingredients_to_special_diets,return_country_cuisine
+from parse_recipes import map_ingredients_to_special_diets,map_ingredients_to_country_cuisine
 from parse_recipes import mix_country_with_diet_recipes
 from barcode_parser import sample_n_barcode,start_notification
 import random
@@ -41,6 +41,7 @@ def check_and_return_diet_existance(temp_diet):
 class fridge_contet:
     def __init__(self,name, content_list=None,diet=None,country_cuisine=None,food_preference = None, fridge_list_vec=None):##init fridge_content 
         self.name = name
+        self.cuisine = None
         if diet is None:
             self.diet_dict  = {}
         if country_cuisine is None:
@@ -73,6 +74,12 @@ class fridge_contet:
         #print('keys ', self.country_cuisine_dict)
         return self.country_cuisine_dict
 
+    def get_len_recipes(self):
+        if self.food_preference  == 'c':
+            return len(self.get_country_cuisine().keys())
+        else:
+            return len(self.get_diet())
+
     def check_country_and_diet_cuisine(self):
         if bool(fridge.get_diet()) and bool(fridge.get_country_cuisine()):
             if self.food_preference == '':
@@ -87,6 +94,10 @@ class fridge_contet:
             if bool(self.get_country_cuisine()):
                 self.food_preference = 'c'
                 False
+    def set_current_cuisine(self,cuisine):
+        self.current_cuisine =  cuisine
+    def get_current_cuisine(self):
+        return self.current_cuisine
             
     def set_food_preference(self):
         print('Which food preference do you prioritize?')
@@ -205,14 +216,12 @@ def map_ingredients_to_recipes(fridge):
 
         if bool(fridge.get_diet()) or fridge.get_food_preference == 'd':# the user preference is a special diet or multiple special diets
             print('speciallllllllllllllllllllll')
-            map_ingredients_to_special_diets(fridge,1)#map fridge obj to 1 recipes of the special diets
+            map_ingredients_to_special_diets(fridge,2)#map fridge obj to 1 recipes of the special diets
             exit()
         else:
             print('no diettt recipes')
         if bool(fridge.get_country_cuisine()) or fridge.get_food_preference == 'c':# the user preference is country cuisine or multiple country cuisine
-            country_string_list = return_country_cuisine(fridge,5)
-            print('Country recipe List' , country_string_list)
-            start_notification(country_string_list,fridge)
+            map_ingredients_to_country_cuisine(fridge,4)
             exit()
         else:
             print('no country cuisine')
@@ -248,18 +257,20 @@ def set_random_cuisine_recipe():
         with open(cuisine_path) as json_file:
             recipes_data = json.load(json_file)
         fridge.add_country_cuisine(random.choice(list(recipes_data.keys())))
+        #fridge.add_country_cuisine(random.choice(list(recipes_data.keys())))
 
 
     if fridge.food_preference == 'd':
         with open(diet_path) as json_file:
             recipes_data = json.load(json_file)
         fridge.add_diet(random.choice(list(recipes_data.keys())))
+        fridge.add_diet(random.choice(list(recipes_data.keys())))
 
       
 fridge = fridge_contet('JIM')
      
 def main():
-    add_sampled_elements_and_food_preference_to_fridge(30,'c')
+    add_sampled_elements_and_food_preference_to_fridge(1900,'c')
     map_ingredients_to_recipes(fridge)
     exit()
 
